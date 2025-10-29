@@ -1,16 +1,22 @@
-# splitmate
+# Splitmate
 
-A new Flutter project.
+Splitmate — Simplifying Shared & Personal Expenses (Flutter App)
+A smart and user-friendly solution for tracking daily, group, and personal expenses — built using Flutter and Firebase.
 
-## Getting Started
+---
 
-This project is a starting point for a Flutter application.
+## ✨ Features
+- 💸 Micro-expense tracking (₹1–₹10 daily spends)
+- 👨‍👩‍👦 Parent monitoring (optional, permission-based)
+- 🔄 Offline expense logging with auto-sync
+- 📄 Monthly PDF report generation and sharing
 
-A few resources to get you started if this is your first Flutter project:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🚀 Getting Started (Development)
+
+### 1️⃣ Clone the repository
+```bash
+git clone https://github.com/AyushShende2679/splitmate.git
+cd splitmate
