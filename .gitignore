@@ -1,0 +1,88 @@
+# ============================
+# General / Miscellaneous
+# ============================
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# ============================
+# IDEs and Editors
+# ============================
+*.iml
+*.ipr
+*.iws
+.idea/
+# Uncomment if you don’t want to share VS Code settings
+#.vscode/
+
+# ============================
+# Flutter / Dart / Pub
+# ============================
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+
+# ============================
+# Android
+# ============================
+/android/.gradle
+/android/app/debug
+/android/app/profile
+/android/app/release
+local.properties
+*.keystore
+*.jks
+
+# ============================
+# iOS
+# ============================
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+
+# ============================
+# Firebase / Secrets (Important)
+# ============================
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+.env
+.env.*
+keys.json
+config.dart
+lib/secrets.dart
+
+# ============================
+# Local Databases / Caches
+# ============================
+*.hive
+*.db
+*.sqlite
+
+# ============================
+# Symbolication & Obfuscation
+# ============================
+app.*.symbols
+app.*.map.json
+
+# ============================
+# Build Outputs
+# ============================
+*.lock
+*.tmp
