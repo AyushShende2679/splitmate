@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Open SplitMate</title>
+  <script>
+    function openApp() {
+      const code = new URLSearchParams(window.location.search).get("code");
+      window.location.href = "splitmate://monitor?code=" + code;
+
+      // Fallback after 1.5 seconds
+      setTimeout(() => {
+        if (/Android/i.test(navigator.userAgent)) {
+          window.location.href = "https://play.google.com/store/apps/details?id=com.splitmate.app";
+        } else if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          window.location.href = "https://apps.apple.com/app/idXXXXXXXX";
+        }
+      }, 1500);
+    }
+
+    window.onload = () => {
+      // Try auto-open on Android
+      if (/Android/i.test(navigator.userAgent)) {
+        openApp();
+      }
+    };
+  </script>
+</head>
+<body>
+  <p>Redirecting you to SplitMate...</p>
+  <button onclick="openApp()">Open SplitMate App</button>
+</body>
+</html>

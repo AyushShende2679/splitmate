@@ -1,0 +1,86 @@
+name: splitmate_expense_tracker
+description: A smart expense tracking app with social login and advanced features.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase & Authentication
+  firebase_core: ^2.25.4
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.12.2
+  cloud_functions: ^4.3.4
+  http: ^1.2.1
+
+  # Charts & Local DB
+  fl_chart: ^1.1.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # UI & Icons
+  cupertino_icons: ^1.0.8
+  font_awesome_flutter: ^10.6.0
+  shimmer: ^3.0.0
+  lottie: ^3.3.1
+  image_picker: ^1.0.4
+
+  # Social Login
+  google_sign_in: ^6.0.4
+
+  # State Management & Utils
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+
+  # Date & Time
+  intl: ^0.20.2 
+
+  # File Handling & PDF
+  printing: ^5.14.2
+  open_file: ^3.3.2
+  permission_handler: ^12.0.1
+  pdf: ^3.10.8
+  path_provider: ^2.1.1
+  device_info_plus: ^11.5.0
+
+  # Local Storage & Offline Support
+  sqflite: ^2.3.0
+  connectivity_plus: ^6.1.5
+  share_plus: ^7.0.0
+  uni_links2: ^0.6.0
+
+  timer_button: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  json_serializable: ^6.7.1
+  analyzer: ^6.4.1
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.6
+  json_annotation: ^4.9.0
+  flutter_launcher_icons: "^0.13.1"
+
+dependency_overrides:
+  firebase_core: ^3.4.1
+  firebase_auth_web: 5.13.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logos/
+    - assets/fonts/
+    - assets/App icon.png
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/App icon.png"
+  min_sdk_android: 21
