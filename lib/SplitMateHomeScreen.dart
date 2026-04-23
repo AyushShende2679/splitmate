@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
 import '../models/models.dart';
 import 'screens/add_edit_expense_screen.dart';
 import 'screens/profile_page.dart';
@@ -10,17 +11,18 @@ import 'screens/reports_page.dart';
 import 'screens/groups_page.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
-import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'package:splitmate_expense_tracker/utils/io_helper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:splitmate_expense_tracker/screens/services/group_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class SplitMateHomeScreen extends StatefulWidget {
   const SplitMateHomeScreen({super.key});
@@ -33,8 +35,7 @@ class _SplitMateHomeScreenState extends State<SplitMateHomeScreen> {
   bool _isGroupMode = false;
   int _selectedMonth = DateTime.now().month;
   bool _showPieChart = true;
-  final bool _isOfflineSynced = true;
-  bool _hasNotification = false;
+
   String _currencySymbol = '₹';
 
   late final Box _personalBox;
@@ -51,7 +52,7 @@ class _SplitMateHomeScreenState extends State<SplitMateHomeScreen> {
     super.initState();
     _personalBox = Hive.box('personal_expenses');
     _groupBox = Hive.box('group_expenses');
-    saveDummyProfileToHive();
+
     _invitationsBox = Hive.box('group_invitations');
     _loadCurrency(); 
     final statusBox = Hive.box('notification_status');
@@ -240,27 +241,12 @@ void _loadCurrency() {
     });
   }
 
- 
-  void saveDummyProfileToHive() async {
-    final profileBox = Hive.box('user_profile');
 
-    await profileBox.put("name", "John Doe");
-    await profileBox.put("email", "john@example.com");
-    await profileBox.put("phone", "9876543210");
-    await profileBox.put("currency", "₹");
-    await profileBox.put("profileImagePath", "/path/to/dummy.jpg");
-
-    print("✅ Dummy profile saved to Hive");
-  }
 
   String _newId() => DateTime.now().microsecondsSinceEpoch.toString();
 
 
   void _openNotifications() {
-    
-    setState(() => _hasNotification = false);
-
-   
     final statusBox = Hive.box('notification_status');
     statusBox.put('hasUnseenNotifications', false);
 
@@ -316,7 +302,6 @@ void _loadCurrency() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
       body: IndexedStack(
         index: _selectedIndex,
         children: [
@@ -355,33 +340,45 @@ void _loadCurrency() {
     );
   }
 
+
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final iconColor = isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF475569);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      color: Colors.white,
+      color: Colors.transparent,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
+          Text(
             'SplitMate',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: textColor,
               fontFamily: 'Inter',
             ),
           ),
           Row(
             children: [
-              _buildActionIconButton(
-                icon: Icons.notifications_outlined,
-                onPressed: _openNotifications,
-                hasNotification: _hasNotification,
+              ValueListenableBuilder(
+                valueListenable: Hive.box('notification_status').listenable(),
+                builder: (context, Box statusBox, _) {
+                  final hasNotification = statusBox.get('hasUnseenNotifications', defaultValue: false) as bool;
+                  return _buildActionIconButton(
+                    icon: Icons.notifications_outlined,
+                    onPressed: _openNotifications,
+                    hasNotification: hasNotification,
+                    iconColor: iconColor,
+                  );
+                },
               ),
               const SizedBox(width: 12),
               _buildActionIconButton(
                 icon: Icons.account_circle_outlined,
                 onPressed: _openProfile,
+                iconColor: iconColor,
               ),
             ],
           ),
@@ -394,12 +391,15 @@ void _loadCurrency() {
     required IconData icon,
     required VoidCallback onPressed,
     bool hasNotification = false,
+    Color? iconColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final effectiveColor = iconColor ?? (isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF475569));
     return Stack(
       children: [
         IconButton(
           onPressed: onPressed,
-          icon: Icon(icon, size: 24, color: const Color(0xFF666666)),
+          icon: Icon(icon, size: 24, color: effectiveColor),
           padding: const EdgeInsets.all(8),
         ),
         if (hasNotification)
@@ -420,12 +420,14 @@ void _loadCurrency() {
   }
 
   Widget _buildModeToggle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
       ),
       child: Row(
         children: [
@@ -450,22 +452,17 @@ void _loadCurrency() {
 
   Widget _buildToggleButton(
       String text, bool isActive, VoidCallback onPressed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final inactiveColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color: isActive ? AppTheme.primary.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
+          border: isActive ? Border.all(color: AppTheme.primary.withValues(alpha: 0.4)) : null,
         ),
         child: Text(
           text,
@@ -473,7 +470,7 @@ void _loadCurrency() {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: isActive ? const Color(0xFF1A1A1A) : const Color(0xFF666666),
+            color: isActive ? activeColor : inactiveColor,
           ),
         ),
       ),
@@ -482,31 +479,30 @@ void _loadCurrency() {
 
   Widget _buildMonthlySummary() {
     final total = _monthlyTotal();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final dividerColor = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: isDark
+          ? AppTheme.glassDecoration(borderRadius: 20)
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Monthly Summary',
+              Text('Monthly Summary',
                   style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A))),
+                      color: textColor)),
               Row(
                 children: [
                   GestureDetector(
@@ -514,7 +510,7 @@ void _loadCurrency() {
                     child: Icon(
                         _showPieChart ? Icons.bar_chart : Icons.pie_chart,
                         size: 20,
-                        color: const Color(0xFF4A90E2)),
+                        color: AppTheme.chartBlue),
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
@@ -525,10 +521,10 @@ void _loadCurrency() {
                             style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF4A90E2))),
+                                color: Color(0xFF60A5FA))),
                         const SizedBox(width: 4),
                         const Icon(Icons.keyboard_arrow_down,
-                            size: 16, color: const Color(0xFF4A90E2)),
+                            size: 16, color: Color(0xFF60A5FA)),
                       ],
                     ),
                   ),
@@ -555,36 +551,36 @@ void _loadCurrency() {
                     _buildSummaryItem(
                         'Food',
                         _formatCurrency(_sumByCategory('Food')),
-                        const Color(0xFF4A90E2)),
+                        AppTheme.chartBlue),
                     _buildSummaryItem(
                         'Transport',
                         _formatCurrency(_sumByCategory('Transport')),
-                        const Color(0xFF50E3C2)),
+                        AppTheme.chartTeal),
                     _buildSummaryItem(
                         'Shopping',
                         _formatCurrency(_sumByCategory('Shopping')),
-                        const Color(0xFFE5A23A)),
+                        AppTheme.chartAmber),
                     _buildSummaryItem(
                         'Bills',
                         _formatCurrency(_sumByCategory('Bills')),
-                        const Color(0xFFE53E3E)),
-                    const Divider(height: 20),
+                        AppTheme.chartRose),
+                    Divider(height: 20, color: dividerColor),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Total',
+                        Text('Total',
                             style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF1A1A1A))),
+                                color: textColor)),
                         Text(
                           _formatCurrency(total),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             color: _isGroupMode
-                                ? const Color(0xFF4A90E2)
-                                : const Color(0xFFE53E3E),
+                                ? AppTheme.chartBlue
+                                : AppTheme.chartRose,
                           ),
                         ),
                       ],
@@ -601,8 +597,9 @@ void _loadCurrency() {
 
   Widget _buildPieChart() {
     final total = _monthlyTotal();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (total == 0) {
-      return const Center(child: Text('No data'));
+      return Center(child: Text('No data', style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8))));
     }
 
     final values = [
@@ -613,10 +610,10 @@ void _loadCurrency() {
     ];
 
     final colors = [
-      const Color(0xFF4A90E2),
-      const Color(0xFF50E3C2),
-      const Color(0xFFE5A23A),
-      const Color(0xFFE53E3E),
+      AppTheme.chartBlue,
+      AppTheme.chartTeal,
+      AppTheme.chartAmber,
+      AppTheme.chartRose,
     ];
 
     return PieChart(
@@ -660,10 +657,11 @@ void _loadCurrency() {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
                 const titles = ['Food', 'Trans', 'Shop', 'Bills'];
                 final idx = value.toInt();
                 return idx >= 0 && idx < titles.length
-                    ? Text(titles[idx])
+                    ? Text(titles[idx], style: TextStyle(color: isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B), fontSize: 11))
                     : const Text('');
               },
             ),
@@ -679,16 +677,16 @@ void _loadCurrency() {
         borderData: FlBorderData(show: false),
         barGroups: [
           BarChartGroupData(x: 0, barRods: [
-            BarChartRodData(toY: values[0], color: const Color(0xFF4A90E2))
+            BarChartRodData(toY: values[0], color: AppTheme.chartBlue, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)))
           ]),
           BarChartGroupData(x: 1, barRods: [
-            BarChartRodData(toY: values[1], color: const Color(0xFF50E3C2))
+            BarChartRodData(toY: values[1], color: AppTheme.chartTeal, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)))
           ]),
           BarChartGroupData(x: 2, barRods: [
-            BarChartRodData(toY: values[2], color: const Color(0xFFE5A23A))
+            BarChartRodData(toY: values[2], color: AppTheme.chartAmber, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)))
           ]),
           BarChartGroupData(x: 3, barRods: [
-            BarChartRodData(toY: values[3], color: const Color(0xFFE53E3E))
+            BarChartRodData(toY: values[3], color: AppTheme.chartRose, borderRadius: const BorderRadius.vertical(top: Radius.circular(4)))
           ]),
         ],
       ),
@@ -696,6 +694,9 @@ void _loadCurrency() {
   }
 
   Widget _buildSummaryItem(String category, String amount, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -709,13 +710,13 @@ void _loadCurrency() {
           Expanded(
             flex: 15,
             child: Text(category,
-                style: const TextStyle(fontSize: 14, color: Color(0xFF666666))),
+                style: TextStyle(fontSize: 14, color: subtextColor)),
           ),
           Text(amount,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A1A))),
+                  color: textColor)),
         ],
       ),
     );
@@ -757,40 +758,40 @@ void _loadCurrency() {
     Color color,
     VoidCallback onPressed,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
-        ),
+        decoration: isDark
+            ? AppTheme.glassDecoration(borderRadius: 16)
+            : BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
         child: Column(
           children: [
             Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10)),
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A1A)),
+                    color: textColor),
                 textAlign: TextAlign.center),
             const SizedBox(height: 4),
             Text(subtitle,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                style: TextStyle(fontSize: 11, color: subtextColor),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
@@ -802,23 +803,26 @@ void _loadCurrency() {
 
   Widget _buildRecentExpenses() {
     final box = _isGroupMode ? _groupBox : _personalBox;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Recent Expenses',
+          Text('Recent Expenses',
               style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A))),
+                  color: textColor)),
           const SizedBox(height: 16),
           ValueListenableBuilder(
             valueListenable: box.listenable(),
             builder: (context, Box b, _) {
               final items = b.values
                   .whereType<Map>()
-                  .map((e) => Map<String, dynamic>.from(e as Map))
+                  .map((e) => Map<String, dynamic>.from(e))
                   .map((m) => _isGroupMode
                       ? GroupExpense.fromMap(m)
                       : PersonalExpense.fromMap(m))
@@ -831,11 +835,16 @@ void _loadCurrency() {
               if (items.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12)),
-                  child: const Center(
-                    child: Text('No expenses yet. Tap Add to create one.'),
+                  decoration: isDark
+                      ? AppTheme.glassDecoration(borderRadius: 12)
+                      : BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                  child: Center(
+                    child: Text('No expenses yet. Tap Add to create one.',
+                        style: TextStyle(color: subtextColor)),
                   ),
                 );
               }
@@ -862,36 +871,37 @@ void _loadCurrency() {
   }
 
   Widget _buildPersonalExpenseItem(PersonalExpense expense) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ]),
+      decoration: isDark
+          ? AppTheme.glassDecoration(borderRadius: 14)
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
       child: Row(
         children: [
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(expense.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF1A1A1A))),
+                      color: textColor)),
               const SizedBox(height: 4),
-              Row(children: [
+              Wrap(children: [
                 Text(expense.category,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF666666))),
+                    style: TextStyle(
+                        fontSize: 12, color: subtextColor)),
                 Text(' • ${_formatDate(expense.date)}',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF666666))),
+                    style: TextStyle(
+                        fontSize: 12, color: subtextColor)),
               ]),
             ]),
           ),
@@ -902,23 +912,23 @@ void _loadCurrency() {
                   style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFE53E3E))),
+                      color: Color(0xFFFB7185))),
               const SizedBox(height: 8),
               Row(mainAxisSize: MainAxisSize.min, children: [
                 GestureDetector(
                   onTap: () => _openExpenseForm(expense: expense),
-                  child: const Padding(
-                      padding: EdgeInsets.all(4),
+                  child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Icon(Icons.edit_outlined,
-                          size: 16, color: Color(0xFF4A90E2))),
+                          size: 16, color: AppTheme.chartBlue)),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => _deleteExpense(expense),
-                  child: const Padding(
-                      padding: EdgeInsets.all(4),
+                  child: Padding(
+                      padding: const EdgeInsets.all(4),
                       child: Icon(Icons.delete_outline,
-                          size: 16, color: Color(0xFFE53E3E))),
+                          size: 16, color: AppTheme.danger)),
                 ),
               ]),
             ],
@@ -929,18 +939,19 @@ void _loadCurrency() {
   }
 
   Widget _buildGroupExpenseItem(GroupExpense expense) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ]),
+      decoration: isDark
+          ? AppTheme.glassDecoration(borderRadius: 14)
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
       child: Column(
         children: [
           Row(
@@ -950,19 +961,19 @@ void _loadCurrency() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(expense.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF1A1A1A))),
+                              color: textColor)),
                       const SizedBox(height: 4),
-                      Row(children: [
+                      Wrap(children: [
                         Text('Paid by ${expense.paidBy}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF666666))),
+                            style: TextStyle(
+                                fontSize: 12, color: subtextColor)),
                         Text(
                             ' • ${expense.category} • ${_formatDate(expense.date)}',
-                            style: const TextStyle(
-                                fontSize: 12, color: Color(0xFF666666))),
+                            style: TextStyle(
+                                fontSize: 12, color: subtextColor)),
                       ]),
                     ]),
               ),
@@ -970,26 +981,26 @@ void _loadCurrency() {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(_formatCurrency(expense.amount),
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF4A90E2))),
+                          color: AppTheme.chartBlue)),
                   const SizedBox(height: 8),
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     GestureDetector(
                       onTap: () => _openExpenseForm(expense: expense),
-                      child: const Padding(
-                          padding: EdgeInsets.all(4),
+                      child: Padding(
+                          padding: const EdgeInsets.all(4),
                           child: Icon(Icons.edit_outlined,
-                              size: 16, color: Color(0xFF4A90E2))),
+                              size: 16, color: AppTheme.chartBlue)),
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => _deleteExpense(expense),
-                      child: const Padding(
-                          padding: EdgeInsets.all(4),
+                      child: Padding(
+                          padding: const EdgeInsets.all(4),
                           child: Icon(Icons.delete_outline,
-                              size: 16, color: Color(0xFFE53E3E))),
+                              size: 16, color: AppTheme.danger)),
                     ),
                   ]),
                 ],
@@ -1005,8 +1016,8 @@ void _loadCurrency() {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: expense.isSettled
-                        ? const Color(0xFF50E3C2).withOpacity(0.1)
-                        : const Color(0xFFE5A23A).withOpacity(0.1),
+                        ? AppTheme.success.withValues(alpha: 0.15)
+                        : AppTheme.warning.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -1015,31 +1026,39 @@ void _loadCurrency() {
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: expense.isSettled
-                          ? const Color(0xFF50E3C2)
-                          : const Color(0xFFE5A23A),
+                          ? AppTheme.success
+                          : AppTheme.warning,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
               ),
-              if (!expense.isSettled) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _settleExpense(expense),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: const Color(0xFF4A90E2),
-                        borderRadius: BorderRadius.circular(6)),
-                    child: const Text('Settle',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white)),
+              Builder(builder: (context) {
+                if (expense.isSettled) return const SizedBox.shrink();
+                final uid = FirebaseAuth.instance.currentUser?.uid;
+                if (uid == null) return const SizedBox.shrink();
+                final isPayer = uid == expense.paidById;
+                final alreadySettled = expense.settledBy[uid] == true;
+                if (isPayer || alreadySettled) return const SizedBox.shrink();
+                return Row(mainAxisSize: MainAxisSize.min, children: [
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _settleExpense(expense),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: const Text('Settle',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white)),
+                    ),
                   ),
-                ),
-              ],
+                ]);
+              }),
             ],
           ),
         ],
@@ -1048,15 +1067,11 @@ void _loadCurrency() {
   }
 
   Widget _buildBottomNavigation() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, -4))
-        ],
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        border: Border(top: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0))),
       ),
       child: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -1068,9 +1083,9 @@ void _loadCurrency() {
           setState(() => _selectedIndex = index);
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF4A90E2),
-        unselectedItemColor: const Color(0xFF999999),
+        backgroundColor: Colors.transparent,
+        selectedItemColor: AppTheme.primary,
+        unselectedItemColor: isDark ? Colors.white.withValues(alpha: 0.4) : const Color(0xFF94A3B8),
         elevation: 0,
         selectedLabelStyle:
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -1117,7 +1132,9 @@ void _loadCurrency() {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    if (difference.inDays == 0) {
+    if (difference.isNegative || difference.inMinutes == 0) {
+      return 'Just now';
+    } else if (difference.inDays == 0) {
       if (difference.inHours == 0) return '${difference.inMinutes}m ago';
       return '${difference.inHours}h ago';
     } else if (difference.inDays == 1) {
@@ -1150,14 +1167,14 @@ void _loadCurrency() {
 
   double _monthlyTotal() {
     final items = _allForMonth();
-    return items.fold(0.0, (sum, e) => sum + (e.amount as double));
+    return items.fold(0.0, (s, e) => s + ((e.amount as num).toDouble()));
   }
 
   double _sumByCategory(String category) {
     final items = _allForMonth();
     return items
         .where((e) => (e.category as String) == category)
-        .fold(0.0, (sum, e) => sum + (e.amount as double));
+        .fold(0.0, (s, e) => s + ((e.amount as num).toDouble()));
   }
 
   Future<void> _openExpenseForm({dynamic expense}) async {
@@ -1172,19 +1189,20 @@ void _loadCurrency() {
         _showSnackBar('You must create or join a group first.');
         return;
       }
+      if (!mounted) return;
       selectedGroupId = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (ctx) => AlertDialog(
           title: const Text('Select a Group'),
           content: SizedBox(
             width: double.minPositive,
             child: ListView.builder(
               shrinkWrap: true,
               itemCount: groups.length,
-              itemBuilder: (context, index) {
+              itemBuilder: (ctx, index) {
                 return ListTile(
                   title: Text(groups[index].name),
-                  onTap: () => Navigator.of(context).pop(groups[index].id),
+                  onTap: () => Navigator.of(ctx).pop(groups[index].id),
                 );
               },
             ),
@@ -1194,6 +1212,7 @@ void _loadCurrency() {
       if (selectedGroupId == null) return;
     }
 
+    if (!mounted) return;
     final result = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute(
         builder: (_) => AddEditExpenseScreen(
@@ -1264,7 +1283,6 @@ void _loadCurrency() {
 
     if (mounted) setState(() {});
     _showSnackBar(expense == null ? 'Expense saved' : 'Expense updated');
-    if (mounted) setState(() => _hasNotification = true);
   }
 
   void _deleteExpense(dynamic expense) {
@@ -1426,49 +1444,57 @@ void _loadCurrency() {
       );
 
       
-      final dir = await getApplicationDocumentsDirectory();
-      final mode = _isGroupMode ? 'Group' : 'Personal';
-      final monthName = _getMonthName(_selectedMonth);
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final fileName = 'SplitMate_${mode}${monthName}$timestamp.pdf';
+      if (kIsWeb) {
+        // On web, use printing package to display PDF
+        if (mounted) Navigator.pop(context);
+        final pdfBytes = await pdf.save();
+        await Printing.layoutPdf(onLayout: (format) async => pdfBytes);
+      } else {
+        // On mobile, save to file and offer open/share
+        final dir = await getApplicationDocumentsDirectory();
+        final mode = _isGroupMode ? 'Group' : 'Personal';
+        final monthName = _getMonthName(_selectedMonth);
+        final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final fileName = 'SplitMate_$mode$monthName$timestamp.pdf';
 
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(await pdf.save());
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(await pdf.save());
 
-    
-      if (mounted) Navigator.pop(context);
+      
+        if (mounted) Navigator.pop(context);
 
-     
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('PDF Generated'),
-            content: Text('Report saved inside app folder as:\n\n$fileName'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await OpenFile.open(
-                      file.path); 
-                },
-                child: const Text('Open'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await Share.shareXFiles([XFile(file.path)],
-                      text: '📊 My SplitMate Expense Report');
-                },
-                child: const Text('Share'),
-              ),
-            ],
-          ),
-        );
+       
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('PDF Generated'),
+              content: Text('Report saved inside app folder as:\n\n$fileName'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await OpenFile.open(
+                        file.path); 
+                  },
+                  child: const Text('Open'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await Share.shareXFiles([XFile(file.path)],
+                        text: '📊 My SplitMate Expense Report');
+                  },
+                  child: const Text('Share'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) Navigator.pop(context); 
@@ -1532,7 +1558,7 @@ void _loadCurrency() {
   }
 
   pw.Widget _buildPDFSummary(List<dynamic> expenses, pw.Font tff) {
-    final total = expenses.fold(0.0, (sum, e) => sum + (e.amount as double));
+    final total = expenses.fold(0.0, (s, e) => s + ((e.amount as num).toDouble()));
     final avgPerDay =
         total / DateTime(DateTime.now().year, _selectedMonth + 1, 0).day;
 
@@ -1674,12 +1700,12 @@ void _loadCurrency() {
   pw.Widget _buildPDFCategoryBreakdown(List<dynamic> expenses, pw.Font tff) {
     final categories = ['Food', 'Transport', 'Shopping', 'Bills'];
     final categoryTotals = <String, double>{};
-    final total = expenses.fold(0.0, (sum, e) => sum + (e.amount as double));
+    final total = expenses.fold(0.0, (s, e) => s + ((e.amount as num).toDouble()));
 
     for (final category in categories) {
       categoryTotals[category] = expenses
           .where((e) => e.category == category)
-          .fold(0.0, (sum, e) => sum + (e.amount as double));
+          .fold(0.0, (s, e) => s + ((e.amount as num).toDouble()));
     }
 
     final barWidth = 200.0; 
@@ -1758,7 +1784,7 @@ void _loadCurrency() {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
               pw.Divider(color: PdfColor.fromHex('#E0E0E0')),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -1799,58 +1825,7 @@ void _loadCurrency() {
     }
   }
 
-  Future<Directory> _getDownloadDirectory() async {
-    if (Platform.isAndroid) {
-      PermissionStatus status;
 
-      if (Platform.isAndroid &&
-          await DeviceInfoPlugin()
-              .androidInfo
-              .then((info) => info.version.sdkInt >= 30)) {
-        status = await Permission.manageExternalStorage.request();
-      } else {
-        status = await Permission.storage.request();
-      }
-
-      if (!status.isGranted) {
-        throw Exception('Storage permission denied');
-      }
-
-      final defaultDir = Directory('/storage/emulated/0/Download');
-      if (await defaultDir.exists()) {
-        return defaultDir;
-      }
-
-      final externalDir = await getExternalStorageDirectory();
-      if (externalDir != null) {
-        final splitMateDir = Directory('${externalDir.path}/SplitMate');
-        if (!await splitMateDir.exists()) {
-          await splitMateDir.create(recursive: true);
-        }
-        return splitMateDir;
-      }
-
-      throw Exception('Could not find a valid directory to save the file.');
-    } else {
-      return await getApplicationDocumentsDirectory();
-    }
-  }
-
-  Future<String> _savePDF(pw.Document pdf) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final mode = _isGroupMode ? 'Group' : 'Personal';
-      final monthName = _getMonthName(_selectedMonth);
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final fileName = 'SplitMate_${mode}${monthName}$timestamp.pdf';
-      final file = File('${directory.path}/$fileName');
-
-      await file.writeAsBytes(await pdf.save());
-      return fileName;
-    } catch (e) {
-      throw Exception('Failed to save PDF: $e');
-    }
-  }
 
   Future<void> _manageParentAccess() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -1860,9 +1835,9 @@ void _loadCurrency() {
     }
 
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final code = List.generate(8, (i) {
-      final rand = DateTime.now().microsecondsSinceEpoch + i;
-      return chars[rand % chars.length];
+    final random = Random.secure();
+    final code = List.generate(8, (_) {
+      return chars[random.nextInt(chars.length)];
     }).join();
 
     await FirebaseFirestore.instance.collection("monitor_codes").doc(code).set({

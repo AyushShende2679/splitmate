@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:splitmate_expense_tracker/models/models.dart';
@@ -7,6 +6,7 @@ import 'package:splitmate_expense_tracker/screens/pages/add_member_dialog.dart';
 import 'package:intl/intl.dart';
 import 'package:splitmate_expense_tracker/screens/add_edit_expense_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class GroupDetailPage extends StatefulWidget {
   final Group group;
@@ -142,6 +142,11 @@ String _currencySymbol = '₹';
   @override
   Widget build(BuildContext context) {
     final isAdmin = widget.group.createdBy == currentUserId;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white;
+    final cardBorder = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
 return ValueListenableBuilder(
       valueListenable: Hive.box('user_profile').listenable(),
       builder: (context, profileBox, _) {
@@ -150,6 +155,9 @@ return ValueListenableBuilder(
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.group.name),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined),
@@ -181,7 +189,7 @@ return ValueListenableBuilder(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Members', style: Theme.of(context).textTheme.titleLarge),
+            child: Text('Members', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: textColor)),
           ),
           SizedBox(
             height: 80,
@@ -192,7 +200,7 @@ return ValueListenableBuilder(
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No members found.'));
+                  return Center(child: Text('No members found.', style: TextStyle(color: subtextColor)));
                 }
                 final members = snapshot.data!;
                 return ListView.builder(
@@ -208,6 +216,8 @@ return ValueListenableBuilder(
                       child: Column(
                         children: [
                           CircleAvatar(
+                            backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                            foregroundColor: textColor,
                             child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                           ),
                           const SizedBox(height: 4),
@@ -216,7 +226,7 @@ return ValueListenableBuilder(
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 12, color: isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF64748B)),
                           ),
                         ],
                       ),
@@ -226,10 +236,10 @@ return ValueListenableBuilder(
               },
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0)),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Expenses', style: Theme.of(context).textTheme.titleLarge),
+            child: Text('Expenses', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: textColor)),
           ),
           Expanded(
             child: StreamBuilder<List<GroupExpenseModel>>(
@@ -240,9 +250,9 @@ return ValueListenableBuilder(
                 }
                 final expenses = snapshot.data ?? [];
                 if (expenses.isEmpty) {
-                  return const Center(
-                    child: Text('No expenses yet. Tap + to add one!'),
-                  );
+                    return Center(
+                      child: Text('No expenses yet. Tap + to add one!', style: TextStyle(color: subtextColor)),
+                    );
                 }
 
                 return ListView.builder(
@@ -251,19 +261,38 @@ return ValueListenableBuilder(
                   itemBuilder: (context, index) {
                     final expense = expenses[index];
                     return Card(
+                      color: cardBg,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: cardBorder)),
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
                         leading: CircleAvatar(
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                          foregroundColor: textColor,
                           child: Icon(_getCategoryIcon(expense.category)),
                         ),
-                        title: Text(expense.title),
+                        title: Text(expense.title, style: TextStyle(color: textColor)),
                         subtitle: Text(
-                            'Paid by ${expense.paidByName} • ${DateFormat.yMMMd().format(expense.createdAt)}'),
+                            'Paid by ${expense.paidByName} • ${DateFormat.yMMMd().format(expense.createdAt)}',
+                            style: TextStyle(color: subtextColor)),
                         trailing: Text(
                           '$_currencySymbol${expense.amount.toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
                         ),
-                        onTap: () => _editGroupExpense(GroupExpense.fromMap(expense.toJson())),
+                        onTap: () => _editGroupExpense(GroupExpense(
+                          id: expense.id,
+                          groupId: expense.groupId,
+                          title: expense.title,
+                          amount: expense.amount,
+                          date: expense.createdAt,
+                          category: expense.category ?? 'Other',
+                          paidBy: expense.paidByName,       // display name
+                          paidById: expense.paidBy,          // UID
+                          splitStatus: expense.splitStatus ?? 'Pending',
+                          isSettled: expense.isSettled ?? false,
+                          settledBy: (expense.settledBy ?? {}).map(
+                            (k, v) => MapEntry<String, dynamic>(k, v),
+                          ),
+                        )),
                       ),
                     );
                   },
@@ -277,6 +306,8 @@ return ValueListenableBuilder(
         onPressed: _addGroupExpense,
         icon: const Icon(Icons.add),
         label: const Text('Add Expense'),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
       ),
     );
     },

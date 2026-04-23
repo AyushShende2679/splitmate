@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+// ignore: depend_on_referenced_packages
 import 'package:json_annotation/json_annotation.dart';
 
 part 'models.g.dart';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/group_service.dart';
 import 'package:splitmate_expense_tracker/models/models.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class AddMemberDialog extends StatefulWidget {
   final Group group;
@@ -73,19 +74,25 @@ class _AddMemberDialogState extends State<AddMemberDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.55,
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(color: borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Column(
           children: [
-            const Text('Add Member', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Add Member', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
             const SizedBox(height: 14),
             TextField(
               controller: _searchController,
@@ -127,6 +134,7 @@ class _AddMemberDialogState extends State<AddMemberDialog> {
                           subtitle: Text(user['email'] ?? ""),
                           trailing: ElevatedButton(
                             onPressed: _sendingInvite ? null : () => _sendInvite(user),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
                             child: const Text('Invite'),
                           ),
                         );

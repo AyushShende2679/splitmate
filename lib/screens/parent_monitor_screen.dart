@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class ParentMonitorScreen extends StatefulWidget {
   final String childUid;
@@ -89,7 +90,7 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No personal expenses yet."));
+          return Center(child: Text("No personal expenses yet.", style: TextStyle(color: Colors.white.withValues(alpha: 0.5))));
         }
 
         final docs = snapshot.data!.docs;
@@ -103,16 +104,18 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
             final formattedDate = _formatDate(data['date']);
 
             return Card(
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ListTile(
-                leading: const Icon(Icons.person, color: Colors.red),
+                leading: Icon(Icons.person, color: AppTheme.chartRose),
                 title: Text(title,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text("$category • $formattedDate"),
+                    style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+                subtitle: Text("$category • $formattedDate", style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                 trailing: Text(
                   "$currencySymbol${amount.toString()}",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                      fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                 ),
               ),
             );
@@ -144,8 +147,12 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
 
                 
                 final Map<String, Map<String, dynamic>> merged = {};
-                for (final d in paidDocs) merged[d.id] = d.data();
-                for (final d in sharedDocs) merged[d.id] = d.data();
+                for (final d in paidDocs) {
+                  merged[d.id] = d.data();
+                }
+                for (final d in sharedDocs) {
+                  merged[d.id] = d.data();
+                }
 
                 
                 for (final d in userGroupDocs) {
@@ -156,7 +163,7 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
 
                 if (merged.isEmpty) {
                  
-                  return const Center(child: Text("No group expenses yet."));
+                  return Center(child: Text("No group expenses yet.", style: TextStyle(color: Colors.white.withValues(alpha: 0.5))));
                 }
 
                 final items = merged.entries.toList()
@@ -175,18 +182,19 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
                         : _formatDate(data['date']);
 
                     return Card(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                       margin: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       child: ListTile(
-                        leading: const Icon(Icons.group, color: Colors.blue),
+                        leading: Icon(Icons.group, color: AppTheme.chartBlue),
                         title: Text(title,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text("$category • $formattedDate"),
+                            style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+                        subtitle: Text("$category • $formattedDate", style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                         trailing: Text(
                           "$currencySymbol${amount.toString()}",
                           style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
+                              fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                         ),
                       ),
                     );
@@ -213,8 +221,11 @@ class _ParentMonitorScreenState extends State<ParentMonitorScreen> {
             childCurrency = userSnap.data!.data()?['currency'] ?? '₹';
           }
           return Scaffold(
-            appBar: AppBar(
+                  appBar: AppBar(
               title: const Text("Monitoring Expenses"),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              foregroundColor: Colors.white,
               actions: [
                 IconButton(
                   icon: Icon(_isGroupMode ? Icons.group : Icons.person),

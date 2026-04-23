@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/group_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class CreateGroupDialog extends StatefulWidget {
   const CreateGroupDialog({super.key});
@@ -16,7 +17,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
   final GroupService _groupService = GroupService();
   
   List<Map<String, dynamic>> _searchResults = [];
-  List<Map<String, dynamic>> _selectedUsers = [];
+  final List<Map<String, dynamic>> _selectedUsers = [];
   bool _isLoading = false;
   bool _isSearching = false;
 
@@ -80,11 +81,16 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final bgColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0);
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         children: [
@@ -93,7 +99,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: isDark ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFCBD5E1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -102,15 +108,16 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Create New Group',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: textColor,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: Icon(Icons.close, color: textColor),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -147,11 +154,12 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                     maxLines: 2,
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'Add Members',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -179,7 +187,7 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                     Container(
                       constraints: const BoxConstraints(maxHeight: 150),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: ListView.builder(
@@ -211,11 +219,12 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   ],
                   if (_selectedUsers.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    const Text(
+                    Text(
                       'Selected Members',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        color: textColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -224,7 +233,9 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                       children: _selectedUsers.map((user) {
                         final username = (user['username'] ?? 'User') as String;
                         return Chip(
-                          label: Text(username),
+                          label: Text(username, style: TextStyle(color: textColor)),
+                          backgroundColor: AppTheme.primary.withValues(alpha: 0.2),
+                          deleteIconColor: isDark ? Colors.white.withValues(alpha: 0.7) : const Color(0xFF64748B),
                           onDeleted: () {
                             setState(() => _selectedUsers.remove(user));
                           },
@@ -236,6 +247,8 @@ class _CreateGroupDialogState extends State<CreateGroupDialog> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _createGroup,
                     style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),

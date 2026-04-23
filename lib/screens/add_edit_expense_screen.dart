@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart'; // <-- ADDED for Hive access
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import 'package:splitmate_expense_tracker/screens/services/group_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class AddEditExpenseScreen extends StatefulWidget {
   final bool initialIsGroup;
@@ -71,22 +72,28 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   
 
   void _loadCategories() {
+    const List<String> defaultCategories = [
+      'Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Other'
+    ];
+
     final settingsBox = Hive.box('settings');
+    List<String> loaded = defaultCategories;
+
     if (settingsBox.containsKey('settings')) {
       final settings = Map<String, dynamic>.from(settingsBox.get('settings'));
-      setState(() {
-        _categories = List<String>.from(settings['categories'] ?? ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Other']);
-       
-        if (!_categories.contains(_category)) {
-          _category = _categories.isNotEmpty ? _categories.first : 'Other';
-        }
-      });
-    } else {
-       
-      setState(() {
-        _categories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Other'];
-      });
+      final raw = settings['categories'];
+      if (raw is List && raw.isNotEmpty) {
+        loaded = List<String>.from(raw);
+      }
     }
+
+    setState(() {
+      _categories = loaded;
+      // Ensure _category is always a valid entry in _categories
+      if (!_categories.contains(_category)) {
+        _category = _categories.first;
+      }
+    });
   }
   
   Future<void> _fetchGroupMembers() async {
@@ -183,7 +190,12 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
           _currencySymbol = profile.currency;
         }
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? 'Edit Expense' : 'Add Expense')),
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Edit Expense' : 'Add Expense'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -194,8 +206,11 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
               if (!_isEditing)
                 Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: const Color(0xFFF7F7F7), borderRadius: BorderRadius.circular(12)),
-                  child: Row(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
+                  ),child: Row(
                     children: [
                       Expanded(child: _buildToggleButton('Personal', !_isGroup, () => setState(() => _isGroup = false))),
                       Expanded(child: _buildToggleButton('Group', _isGroup, () => setState(() => _isGroup = true))),
@@ -223,7 +238,7 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _category,
+                initialValue: _category,
                 
                 items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
               
@@ -296,16 +311,19 @@ class _AddEditExpenseScreenState extends State<AddEditExpenseScreen> {
   }
 
   Widget _buildToggleButton(String text, bool isActive, VoidCallback onPressed) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final inactiveColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     return GestureDetector(
       onTap: onPressed,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color: isActive ? AppTheme.primary.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: isActive ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4, offset: const Offset(0, 2))] : null,
+          border: isActive ? Border.all(color: AppTheme.primary.withValues(alpha: 0.4)) : null,
         ),
-        child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isActive ? Theme.of(context).primaryColor : Colors.grey[600])),
+        child: Text(text, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isActive ? activeColor : inactiveColor)),
       ),
     );
   }

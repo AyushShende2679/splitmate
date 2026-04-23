@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+// ignore: depend_on_referenced_packages
 import 'package:uuid/uuid.dart';
 import 'package:splitmate_expense_tracker/models/models.dart';
 
@@ -27,7 +29,7 @@ class GroupService {
         };
       }).toList();
     } catch (e) {
-      print('Error getting member details: $e');
+      debugPrint('Error getting member details: $e');
       return [];
     }
   }
@@ -82,7 +84,7 @@ class GroupService {
       final snap = await transaction.get(docRef);
       if (!snap.exists) throw Exception("Expense does not exist!");
 
-      final data = snap.data()! as Map<String, dynamic>;
+      final data = snap.data()!;
       final settledBy = Map<String, bool>.from(data['settledBy'] ?? {});
       final splitBetween = List<String>.from(data['splitBetween'] ?? []);
 
@@ -181,7 +183,7 @@ class GroupService {
       data['message'] = '$inviterName invited you to join $groupName';
       await _firestore.collection('invitations').doc(invitationId).set(data);
     } catch (e) {
-      print('Error sending invitation: $e');
+      debugPrint('Error sending invitation: $e');
     }
   }
 
@@ -382,7 +384,7 @@ class GroupService {
           })
           .toList();
     } catch (e) {
-      print("Error searching users: $e");
+      debugPrint("Error searching users: $e");
       return [];
     }
   }

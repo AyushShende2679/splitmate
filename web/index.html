@@ -18,19 +18,40 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="SplitMate - Smart Expense Tracker">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="splitmate">
+  <meta name="apple-mobile-web-app-title" content="SplitMate">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Google Sign-In Client ID for Web -->
+  <meta name="google-signin-client_id" content="143482753748-c1rl3j3rt00nbvbvins01tnssqk62g3c.apps.googleusercontent.com">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>splitmate</title>
+  <title>SplitMate</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Firebase JS SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBzNMo45Ocks_hFzsvSEJFX7PyfD0StZ0c",
+      authDomain: "splitmate-1cd5c.firebaseapp.com",
+      projectId: "splitmate-1cd5c",
+      storageBucket: "splitmate-1cd5c.firebasestorage.app",
+      messagingSenderId: "143482753748",
+      appId: "1:143482753748:web:a7d96685c92aa2468ca141",
+      measurementId: "G-ZPR27TWB1J"
+    };
+    firebase.initializeApp(firebaseConfig);
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

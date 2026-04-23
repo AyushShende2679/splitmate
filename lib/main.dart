@@ -8,19 +8,26 @@ import 'screens/profile_page.dart';
 import 'screens/notification_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:splitmate_expense_tracker/screens/services/firestore_sync_service.dart';
-import 'package:uni_links2/uni_links.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
 import 'screens/parent_code_screen.dart';
-import 'models/models.dart'; 
+import 'package:flutter/foundation.dart';
+import 'package:splitmate_expense_tracker/firebase_options.dart';
+import 'models/models.dart';
+import 'package:uni_links2/uni_links.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await Hive.initFlutter();
 
   
-  if (!Hive.isAdapterRegistered(0))
+  if (!Hive.isAdapterRegistered(0)) {
     Hive.registerAdapter(PersonalExpenseAdapter());
+  }
   if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(GroupExpenseAdapter());
   if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(UserProfileAdapter());
 
@@ -37,6 +44,8 @@ Future<void> main() async {
     persistenceEnabled: true,
   );
 
+  initThemeNotifier();
+
   runApp(const SplitMateApp());
 }
 
@@ -47,47 +56,24 @@ class SplitMateApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SplitMate',
-      navigatorKey: navigatorKey,
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4A90E2),
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Inter',
-        scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-        appBarTheme: const AppBarTheme(
-          centerTitle: true,
-          elevation: 0,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 2,
-            shadowColor: Colors.black26,
-            backgroundColor: const Color(0xFF4A90E2),
-            foregroundColor: Colors.white,
-          ),
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 1,
-          shadowColor: Colors.black12,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-        ),
-      ),
-      home: const AuthWrapper(),
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/home': (context) => const SplitMateHomeScreen(),
-        '/profile': (context) => const ProfilePage(),
-        '/notifications': (context) => const NotificationPage(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'SplitMate',
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme(),
+          darkTheme: AppTheme.darkTheme(),
+          themeMode: themeMode,
+          home: const AuthWrapper(),
+          routes: {
+            '/login': (context) => const LoginPage(),
+            '/home': (context) => const SplitMateHomeScreen(),
+            '/profile': (context) => const ProfilePage(),
+            '/notifications': (context) => const NotificationPage(),
+          },
+        );
       },
     );
   }
@@ -110,6 +96,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _initDeepLinks() async {
+    if (kIsWeb) return; // uni_links not supported on web
     try {
       final initialLink = await getInitialLink();
       if (initialLink != null) _handleLink(initialLink);
@@ -118,7 +105,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (link != null) _handleLink(link);
       });
     } catch (e) {
-      print("Deep link error: $e");
+      debugPrint("Deep link error: $e");
     }
   }
 
@@ -152,7 +139,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         }
         if (snapshot.hasData && snapshot.data != null) {
           Future.microtask(() async {
-            await restoreAppDataFromFirestore();
+            try {
+              await restoreAppDataFromFirestore();
+            } catch (e) {
+              debugPrint('Error restoring data from Firestore: $e');
+            }
           });
           return const SplitMateHomeScreen();
         } else {
@@ -168,16 +159,33 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-        body: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 20),
-          Text("Loading..."),
-        ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF1F5F9);
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFE2E8F0);
+    final iconColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: bgColor,
+                border: Border.all(color: borderColor),
+              ),
+              child: Icon(Icons.account_balance_wallet_outlined, size: 34, color: iconColor),
+            ),
+            const SizedBox(height: 24),
+            Text('SplitMate', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: textColor)),
+            const SizedBox(height: 16),
+            SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.primary)),
+          ],
+        ),
       ),
-    ));
+    );
   }
 }

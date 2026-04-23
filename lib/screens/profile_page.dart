@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:splitmate_expense_tracker/utils/io_helper.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/models.dart';
 import 'package:splitmate_expense_tracker/screens/services/firestore_sync_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -136,7 +138,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         }
       });
 
-      await restoreAppDataFromFirestore();
       await _ensureProfileFromAuth();
 
       _loadProfile();
@@ -171,7 +172,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     if (_settingsBox.containsKey('settings')) {
       final settings = Map<String, dynamic>.from(_settingsBox.get('settings'));
       setState(() {
-        _monthlyBudget = settings['monthlyBudget'] ?? 0.0;
+        _monthlyBudget = (settings['monthlyBudget'] as num?)?.toDouble() ?? 0.0;
         _budgetAlerts = settings['budgetAlerts'] ?? true;
         _dataBackup = settings['dataBackup'] ?? true;
         _expenseCategories = List<String>.from(settings['categories'] ?? _expenseCategories);
@@ -307,14 +308,25 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
   
   Future<void> _exportData() async {
+    // File-based export only supported on mobile/desktop
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data export is not supported on web. Use the mobile app.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-    
       final personalExpenses = _personalBox.values
           .whereType<Map>()
           .map((e) => PersonalExpense.fromMap(Map<String, dynamic>.from(e)))
           .map((e) {
             final map = e.toMap();
-  
             if (map['date'] is DateTime) {
               map['date'] = (map['date'] as DateTime).toIso8601String();
             }
@@ -325,17 +337,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       final groupExpenses = _groupBox.values
           .whereType<Map>()
           .map((e) {
-            
             final map = Map<String, dynamic>.from(e);
-            
             if (map['date'] is DateTime) {
               map['date'] = (map['date'] as DateTime).toIso8601String();
             }
             return map;
           })
           .toList();
-      
-      
 
       final exportData = {
         'profile': _profile.toMap(),
@@ -358,9 +366,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data exported successfully'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Data exported successfully'),
+            backgroundColor: AppTheme.success,
           ),
         );
       }
@@ -369,7 +377,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppTheme.danger,
           ),
         );
       }
@@ -592,6 +600,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         await _saveSettings();
         await _auth.signOut();
         
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Signed out successfully'),
@@ -599,6 +608,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           ),
         );
         
+        if (!mounted) return;
         Navigator.pushNamedAndRemoveUntil(
           context,
           '/login',
@@ -628,9 +638,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       return MemoryImage(imageBytes);
     } catch (e) {
       // If it fails, it might be an old file path
-      final imageFile = File(imageData);
-      if (imageFile.existsSync()) {
-        return FileImage(imageFile);
+      if (!kIsWeb) {
+        final imageFile = File(imageData);
+        if (imageFile.existsSync()) {
+          return FileImage(imageFile as dynamic);
+        }
       }
     }
     
@@ -641,23 +653,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.grey[800],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _statsCache.clear();
-              setState(() {});
-            },
-            tooltip: 'Refresh Stats',
-          ),
-        ],
+        foregroundColor: isDark ? Colors.white : const Color(0xFF1E293B),
       ),
       body: FadeTransition(
         opacity: _fadeAnimation,
@@ -669,18 +671,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.indigo.shade400, Colors.indigo.shade600],
+                    colors: [AppTheme.primary, const Color(0xFF1E40AF)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.indigo.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Column(
                   children: [
@@ -694,7 +690,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                            
                             backgroundImage: _getProfileImageProvider(),
                             child: _profile.profileImagePath.isEmpty
-                                ? Icon(Icons.person, size: 50, color: Colors.indigo[700])
+                                ? Icon(Icons.person, size: 50, color: AppTheme.primary)
                                 : null,
                            
                           ),
@@ -711,7 +707,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                             child: Icon(
                               Icons.camera_alt,
                               size: 20,
-                              color: Colors.indigo[700],
+                              color: AppTheme.primary,
                             ),
                           ),
                         ),
@@ -767,28 +763,24 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                decoration: isDark
+                    ? AppTheme.glassDecoration(borderRadius: 16)
+                    : BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Edit Profile',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A1A1A),
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -864,7 +856,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                       const SizedBox(height: 16),
                       
                       DropdownButtonFormField<String>(
-                        value: _selectedCurrency,
+                        initialValue: _selectedCurrency,
                         decoration: InputDecoration(
                           labelText: 'Currency',
                           border: OutlineInputBorder(
@@ -892,7 +884,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                         child: ElevatedButton(
                           onPressed: _saveProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4A90E2),
+                            backgroundColor: AppTheme.primary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -947,6 +939,73 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 isDestructive: true,
               ),
               
+              // Dark / Light mode toggle
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Theme.of(context).brightness == Brightness.dark
+                            ? Icons.dark_mode_outlined
+                            : Icons.light_mode_outlined,
+                        color: AppTheme.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Dark Mode',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            Theme.of(context).brightness == Brightness.dark
+                                ? 'Currently dark'
+                                : 'Currently light',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.5)
+                                  : const Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: themeNotifier.isDark,
+                      onChanged: (_) {
+                        themeNotifier.toggle();
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              
               const SizedBox(height: 24),
               
               SizedBox(
@@ -978,7 +1037,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 child: Text(
                   'Version 1.0.0',
                   style: TextStyle(
-                    color: Colors.grey[600],
+                    color: isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFFCBD5E1),
                     fontSize: 12,
                   ),
                 ),
@@ -994,7 +1053,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1030,7 +1089,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1084,11 +1143,16 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     String? subtitle,
     bool isDestructive = false,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
+    final bgColor = isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFF1F5F9);
+    final arrowColor = isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFFCBD5E1);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -1100,13 +1164,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: isDestructive 
-                        ? Colors.red.withOpacity(0.1)
-                        : Colors.blue.withOpacity(0.1),
+                        ? Colors.red.withValues(alpha: 0.15)
+                        : AppTheme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    color: isDestructive ? Colors.red : Colors.blue,
+                    color: isDestructive ? Colors.red : AppTheme.primary,
                     size: 20,
                   ),
                 ),
@@ -1120,7 +1184,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
-                          color: isDestructive ? Colors.red : Colors.grey[800],
+                          color: isDestructive ? Colors.red : textColor,
                         ),
                       ),
                       if (subtitle != null) ...[
@@ -1129,7 +1193,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                           subtitle,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: subtextColor,
                           ),
                         ),
                       ],
@@ -1139,7 +1203,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Colors.grey[400],
+                  color: arrowColor,
                 ),
               ],
             ),

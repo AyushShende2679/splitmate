@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:splitmate_expense_tracker/models/models.dart';
 import '../services/group_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class GroupAddExpensePage extends StatefulWidget {
   final Group group;
@@ -89,6 +90,9 @@ class _GroupAddExpensePageState extends State<GroupAddExpensePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Group Expense'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
       ),
       body: Form(
         key: _formKey,
@@ -130,7 +134,7 @@ class _GroupAddExpensePageState extends State<GroupAddExpensePage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(
                 labelText: 'Category',
                 border: OutlineInputBorder(),
@@ -157,12 +161,14 @@ class _GroupAddExpensePageState extends State<GroupAddExpensePage> {
               maxLines: 2,
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Split Between',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B)),
             ),
             const SizedBox(height: 8),
             Card(
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0))),
               child: Column(
                 children: widget.group.members.map((memberId) {
                   return CheckboxListTile(
@@ -185,6 +191,8 @@ class _GroupAddExpensePageState extends State<GroupAddExpensePage> {
             ElevatedButton(
               onPressed: _isLoading ? null : _addExpense,
               style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

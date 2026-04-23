@@ -5,6 +5,7 @@ import '../models/models.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:splitmate_expense_tracker/screens/services/group_service.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class AddExpensePage extends StatefulWidget {
   const AddExpensePage({super.key});
@@ -31,7 +32,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
 
 
   late Box _personalBox;
-  late Box _groupBox;
+
 
   final GroupService _groupService = GroupService();
   String? _selectedGroupId;
@@ -43,7 +44,6 @@ class _AddExpensePageState extends State<AddExpensePage> {
     _loadCategories(); 
 
     _personalBox = Hive.box('personal_expenses');
-    _groupBox = Hive.box('group_expenses');
   }
 
   void _loadCategories() {
@@ -117,6 +117,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
     if (_isGroupExpense) {
       await _ensureSelectedGroup();
       if (_selectedGroupId == null || _selectedGroupId!.isEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('No group found. Create/join a group first.')),
@@ -139,6 +140,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
             : 'Other',
       );
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Group expense added!')),
       );
@@ -162,6 +164,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
           .doc(expense.id)
           .set(expense.toMap());
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Personal expense saved!')),
       );
@@ -194,12 +197,11 @@ class _AddExpensePageState extends State<AddExpensePage> {
         }
 
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
+              appBar: AppBar(
             title: const Text('Add Expense'),
             backgroundColor: Colors.transparent,
             elevation: 0,
-            foregroundColor: Colors.grey[800],
+            foregroundColor: Colors.white,
           ),
           body: Padding(
             padding: const EdgeInsets.all(16),
@@ -209,8 +211,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                     ),
                     child: Row(
                       children: [
@@ -222,23 +225,16 @@ class _AddExpensePageState extends State<AddExpensePage> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
                                 color: !_isGroupExpense
-                                    ? Colors.white
+                                    ? AppTheme.primary.withValues(alpha: 0.2)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: !_isGroupExpense
-                                    ? [
-                                        BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.06),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2))
-                                      ]
-                                    : null,
+                                border: !_isGroupExpense ? Border.all(color: AppTheme.primary.withValues(alpha: 0.4)) : null,
                               ),
-                              child: const Text('Personal',
+                              child: Text('Personal',
                                   textAlign: TextAlign.center,
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w500)),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: !_isGroupExpense ? Colors.white : Colors.white.withValues(alpha: 0.5))),
                             ),
                           ),
                         ),
@@ -252,23 +248,16 @@ class _AddExpensePageState extends State<AddExpensePage> {
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
                                 color: _isGroupExpense
-                                    ? Colors.white
+                                    ? AppTheme.primary.withValues(alpha: 0.2)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: _isGroupExpense
-                                    ? [
-                                        BoxShadow(
-                                            color:
-                                                Colors.black.withOpacity(0.06),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2))
-                                      ]
-                                    : null,
+                                border: _isGroupExpense ? Border.all(color: AppTheme.primary.withValues(alpha: 0.4)) : null,
                               ),
-                              child: const Text('Group',
+                              child: Text('Group',
                                   textAlign: TextAlign.center,
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.w500)),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: _isGroupExpense ? Colors.white : Colors.white.withValues(alpha: 0.5))),
                             ),
                           ),
                         ),
@@ -298,7 +287,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _categoryController.text.isNotEmpty
+                    initialValue: _categoryController.text.isNotEmpty
                         ? _categoryController.text
                         : null,
                     decoration: const InputDecoration(
@@ -359,7 +348,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                       onChanged: (value) {
                         setState(() => _isSettled = value);
                       },
-                      activeThumbColor: const Color(0xFF4A90E2),
+                      activeThumbColor: AppTheme.primary,
                     ),
                   ],
                   const SizedBox(height: 24),

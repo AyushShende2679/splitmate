@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -56,8 +57,8 @@ class _ReportsPageState extends State<ReportsPage> {
   
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([
+    return ListenableBuilder(
+      listenable: Listenable.merge([
         Hive.box('personal_expenses').listenable(),
         Hive.box('user_profile').listenable(), 
       ]),
@@ -68,12 +69,11 @@ class _ReportsPageState extends State<ReportsPage> {
         final personalExpenses = _getPersonalExpenses(personalBox);
         
         return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
+              appBar: AppBar(
             title: const Text('Reports'),
             backgroundColor: Colors.transparent,
             elevation: 0,
-            foregroundColor: Colors.grey[800],
+            foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -108,28 +108,26 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   Widget _buildCard({required String title, required Widget child}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: isDark
+          ? AppTheme.glassDecoration(borderRadius: 20)
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A1A),
+              color: textColor,
             ),
           ),
           const SizedBox(height: 16),
@@ -141,8 +139,10 @@ class _ReportsPageState extends State<ReportsPage> {
   
   Widget _buildMonthlyChart(List<PersonalExpense> expenses) {
     final monthlyTotals = _getMonthlyTotals(expenses);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     if (monthlyTotals.isEmpty) {
-      return const Center(child: Text('No data for charts yet.'));
+      return Center(child: Text('No data for charts yet.', style: TextStyle(color: subtextColor)));
     }
     
     final months = monthlyTotals.keys.toList();
@@ -163,7 +163,7 @@ class _ReportsPageState extends State<ReportsPage> {
                 if (index >= 0 && index < months.length) {
                   return Padding(
                     padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(months[index].split(' ').first, style: const TextStyle(fontSize: 10)),
+                    child: Text(months[index].split(' ').first, style: TextStyle(fontSize: 10, color: isDark ? Colors.white.withValues(alpha: 0.6) : const Color(0xFF64748B))),
                   );
                 }
                 return const Text('');
@@ -183,7 +183,7 @@ class _ReportsPageState extends State<ReportsPage> {
             barRods: [
               BarChartRodData(
                 toY: values[index],
-                color: const Color(0xFF4A90E2),
+                color: AppTheme.chartBlue,
                 width: 16,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -196,8 +196,10 @@ class _ReportsPageState extends State<ReportsPage> {
   
   Widget _buildCategoryChart(List<PersonalExpense> expenses) {
     final categoryTotals = _getCategoryTotals(expenses);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
     if (categoryTotals.isEmpty) {
-      return const Center(child: Text('No data for charts yet.'));
+      return Center(child: Text('No data for charts yet.', style: TextStyle(color: subtextColor)));
     }
     
     final total = categoryTotals.values.fold(0.0, (sum, value) => sum + value);
@@ -222,7 +224,9 @@ class _ReportsPageState extends State<ReportsPage> {
   
   Widget _buildTrendsList(List<PersonalExpense> expenses) {
     if (expenses.isEmpty) {
-      return const Center(child: Text('Not enough data for trends.'));
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final subtextColor = isDark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF94A3B8);
+      return Center(child: Text('Not enough data for trends.', style: TextStyle(color: subtextColor)));
     }
     
     expenses.sort((a, b) => b.date.compareTo(a.date));
@@ -263,10 +267,12 @@ class _ReportsPageState extends State<ReportsPage> {
   }
   
   Widget _buildTrendItem(String title, String value, IconData icon, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -279,10 +285,10 @@ class _ReportsPageState extends State<ReportsPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A1A),
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),

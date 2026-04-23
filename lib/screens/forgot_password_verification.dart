@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timer_button/timer_button.dart'; 
+import 'package:timer_button/timer_button.dart';
+import 'package:splitmate_expense_tracker/theme/app_theme.dart';
+import 'dart:ui';
 
 class ForgotPasswordVerificationPage extends StatefulWidget {
   final String email;
-  const ForgotPasswordVerificationPage({Key? key, required this.email})
-      : super(key: key);
+  const ForgotPasswordVerificationPage({super.key, required this.email});
 
   @override
-  _ForgotPasswordVerificationPageState createState() =>
+  State<ForgotPasswordVerificationPage> createState() =>
       _ForgotPasswordVerificationPageState();
 }
 
@@ -16,11 +17,9 @@ class _ForgotPasswordVerificationPageState
     extends State<ForgotPasswordVerificationPage> {
   bool _isResending = false;
 
- 
   Future<void> resendLink() async {
-    
-    if (_isResending) return; 
-    
+    if (_isResending) return;
+
     setState(() => _isResending = true);
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: widget.email);
@@ -29,7 +28,7 @@ class _ForgotPasswordVerificationPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Reset link re-sent to ${widget.email}'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppTheme.success,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -39,7 +38,7 @@ class _ForgotPasswordVerificationPageState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.message ?? 'Error resending link'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: AppTheme.danger,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -50,206 +49,124 @@ class _ForgotPasswordVerificationPageState
       }
     }
   }
- 
+
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, foregroundColor: Colors.white),
       body: Stack(
         children: [
-          
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primary.withOpacity(0.95),
-                  primary.withOpacity(0.80),
-                  Colors.white,
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-         
-          Positioned(
-            top: -60,
-            left: -60,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.10),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            top: 120,
-            right: -80,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          
+          AppTheme.darkScaffoldBackground(extraOrbs: [
+            AppTheme.backgroundOrb(top: 250, left: -50, size: 180, color: AppTheme.success, opacity: 0.2),
+          ]),
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 4),
-                  
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.95),
-                          Colors.white.withOpacity(0.75),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80, height: 80,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.1),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        child: const Icon(Icons.mark_email_read_outlined, size: 38, color: Colors.white),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primary.withOpacity(0.25),
-                          blurRadius: 22,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                   
-                    child: Icon(Icons.mark_email_read_outlined, size: 46, color: primary),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text("SplitMate",
-                      style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: .5,
-                          color: Colors.white)),
-                  Text("Check your e-mail",
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.white.withOpacity(0.95))),
-                  const SizedBox(height: 24),
-                  
-                 
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 24,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                       
-                        const Text('Check your E-mail',
-                            style: TextStyle(
-                                fontSize: 22.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87),
-                            textAlign: TextAlign.center),
-                        const SizedBox(height: 16.0),
-
-                        
-                        Text(
-                          'We have sent a password reset link to your email address:',
-                          style: TextStyle(fontSize: 16.0, color: Colors.grey.shade700),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8.0),
-                        Text(
-                          widget.email,
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16.0),
-                        const Text(
-                          'If you do not receive the email within a few minutes, please check your spam folder.',
-                          style: TextStyle(fontSize: 14.0, color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16.0),
-                        
-                        
-                        const Text(
-                          'Warning: If you close the app, you will start the process from the beginning.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.redAccent, fontSize: 14.0),
-                        ),
-                        const SizedBox(height: 24.0),
-
-                        
-                        TimerButton(
-                          label: 'Did not receive the email? Send again.',
-                          activeTextStyle: TextStyle(color: primary, fontWeight: FontWeight.w600),
-                          disabledTextStyle: const TextStyle(color: Colors.grey),
-                          onPressed: () {
-                            if (!_isResending) {
-                              resendLink();
-                            }
-                          },
-                          timeOutInSeconds: 60,
-                          buttonType: ButtonType.textButton,
-                          disabledColor: Colors.transparent,
-                          color: Colors.transparent,
-                        ),
-                        const SizedBox(height: 24.0),
-                        
-                        
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54,
-                          child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                      const SizedBox(height: 16),
+                      const Text("Check Your Email", style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white)),
+                      const SizedBox(height: 6),
+                      Text("We've sent you a reset link", style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7))),
+                      const SizedBox(height: 32),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                            decoration: AppTheme.glassDecoration(borderRadius: 24),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'We have sent a password reset link to:',
+                                  style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7)),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  widget.email,
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'If you do not receive the email within a few minutes, please check your spam folder.',
+                                  style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.danger.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          'Closing the app will restart the process.',
+                                          style: TextStyle(color: AppTheme.danger, fontSize: 13),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                TimerButton(
+                                  label: 'Didn\'t receive? Send again.',
+                                  activeTextStyle: const TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.w600),
+                                  disabledTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                                  onPressed: () {
+                                    if (!_isResending) {
+                                      resendLink();
+                                    }
+                                  },
+                                  timeOutInSeconds: 60,
+                                  buttonType: ButtonType.textButton,
+                                  disabledColor: Colors.transparent,
+                                  color: Colors.transparent,
+                                ),
+                                const SizedBox(height: 20),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      elevation: 8,
+                                      shadowColor: AppTheme.primary.withValues(alpha: 0.5),
+                                      backgroundColor: AppTheme.primary,
+                                    ),
+                                    child: const Text("Back to Login", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: const Text("BACK",
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600)),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
             ),
           ),

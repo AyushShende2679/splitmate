@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:splitmate_expense_tracker/models/models.dart';
 
@@ -110,48 +111,64 @@ Future<void> restoreAppDataFromFirestore() async {
   final groupIds = groupsQuery.docs.map((doc) => doc.id).toList();
 
   if (groupIds.isNotEmpty) {
-    final groupExpensesQuery = await FirebaseFirestore.instance.collection('group_expenses').where('groupId', whereIn: groupIds).get();
-    for (final doc in groupExpensesQuery.docs) {
-      final data = doc.data();
-      final expenseModel = GroupExpenseModel.fromJson(data);
-      final hiveMap = {
-        'id': expenseModel.id,
-        'groupId': expenseModel.groupId,
-        'title': expenseModel.title,
-        'amount': expenseModel.amount,
-        'date': expenseModel.createdAt,
-        'category': expenseModel.category ?? 'Other',
-        'paidBy': expenseModel.paidByName,
-        'paidById': expenseModel.paidBy,
-        'isSettled': expenseModel.isSettled ?? false,
-        'splitStatus': expenseModel.splitStatus ?? 'Pending',
-        'settledBy': expenseModel.settledBy ?? {},
-      };
-      await groupBox.put(expenseModel.id, hiveMap);
+    // Firestore whereIn supports max 10 items, batch the query
+    for (var i = 0; i < groupIds.length; i += 10) {
+      final batch = groupIds.sublist(i, i + 10 > groupIds.length ? groupIds.length : i + 10);
+      final groupExpensesQuery = await FirebaseFirestore.instance
+          .collection('group_expenses')
+          .where('groupId', whereIn: batch)
+          .get();
+      for (final doc in groupExpensesQuery.docs) {
+        final data = doc.data();
+        final expenseModel = GroupExpenseModel.fromJson(data);
+        final hiveMap = {
+          'id': expenseModel.id,
+          'groupId': expenseModel.groupId,
+          'title': expenseModel.title,
+          'amount': expenseModel.amount,
+          'date': expenseModel.createdAt,
+          'category': expenseModel.category ?? 'Other',
+          'paidBy': expenseModel.paidByName,
+          'paidById': expenseModel.paidBy,
+          'isSettled': expenseModel.isSettled ?? false,
+          'splitStatus': expenseModel.splitStatus ?? 'Pending',
+          'settledBy': expenseModel.settledBy ?? {},
+        };
+        await groupBox.put(expenseModel.id, hiveMap);
+      }
     }
   }
   
 
   final invitationsBox = Hive.box('group_invitations');
-  await invitationsBox.clear();
+  
+  // 1) First capture what we already have before clearing!
+  final existingInvitationIds = invitationsBox.keys.cast<String>().toSet();
+
   final invitationsQuery = await FirebaseFirestore.instance
       .collection('invitations')
       .where('invitedUser', isEqualTo: uid)
       .where('status', isEqualTo: 'pending')
       .get();
   
+  // 2) Now check if there are newly arrived invitations
+  final firestoreInvitationIds = invitationsQuery.docs.map((d) => d.id).toSet();
+  final hasNewInvitations = firestoreInvitationIds.difference(existingInvitationIds).isNotEmpty;
   
-  if (invitationsQuery.docs.isNotEmpty) {
+  if (hasNewInvitations) {
     final statusBox = Hive.box('notification_status');
     await statusBox.put('hasUnseenNotifications', true);
   }
+
+  // 3) Finally, clear and restore
+  await invitationsBox.clear();
 
   for (final doc in invitationsQuery.docs) {
     final invitation = GroupInvitation.fromJson(doc.data());
     await invitationsBox.put(invitation.id, invitation.toJson());
   }
 
-  print('✅ Restored data from Firestore.');
+  debugPrint('✅ Restored data from Firestore.');
 }
 
 Future<void> clearAppDataFromFirestore() async {
@@ -176,5 +193,5 @@ Future<void> clearAppDataFromFirestore() async {
   await userDoc.set({'settings': {}}, SetOptions(merge: true));
   await userDoc.delete();
   
-  print('✅ Cleared data from Firestore.');
+  debugPrint('✅ Cleared data from Firestore.');
 }
