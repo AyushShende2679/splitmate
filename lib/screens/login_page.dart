@@ -74,6 +74,17 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Login failed: ${_getSimpleErrorMessage(e.toString())}"),
+            backgroundColor: const Color(0xFFE53E3E),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -161,10 +172,14 @@ class _LoginPageState extends State<LoginPage> {
 
   String _getErrorMessage(String errorCode) {
     switch (errorCode) {
+      case 'invalid-credential':
+        return 'Invalid email or password';
       case 'user-not-found':
         return 'No account found with this email';
       case 'wrong-password':
         return 'Incorrect password';
+      case 'invalid-email':
+        return 'The email address is badly formatted';
       case 'user-disabled':
         return 'This account has been disabled';
       case 'too-many-requests':
