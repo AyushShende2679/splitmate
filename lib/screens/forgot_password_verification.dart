@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:timer_button/timer_button.dart';
 import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 import 'dart:ui';
 
@@ -16,14 +16,35 @@ class ForgotPasswordVerificationPage extends StatefulWidget {
 class _ForgotPasswordVerificationPageState
     extends State<ForgotPasswordVerificationPage> {
   bool _isResending = false;
+  int _cooldown = 0;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startCooldown() {
+    setState(() => _cooldown = 60);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_cooldown <= 1) {
+        t.cancel();
+        if (mounted) setState(() => _cooldown = 0);
+      } else {
+        if (mounted) setState(() => _cooldown--);
+      }
+    });
+  }
 
   Future<void> resendLink() async {
-    if (_isResending) return;
+    if (_isResending || _cooldown > 0) return;
 
     setState(() => _isResending = true);
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: widget.email);
-
+      _startCooldown();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -130,19 +151,19 @@ class _ForgotPasswordVerificationPageState
                                   ),
                                 ),
                                 const SizedBox(height: 24),
-                                TimerButton(
-                                  label: 'Didn\'t receive? Send again.',
-                                  activeTextStyle: const TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.w600),
-                                  disabledTextStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                                  onPressed: () {
-                                    if (!_isResending) {
-                                      resendLink();
-                                    }
-                                  },
-                                  timeOutInSeconds: 60,
-                                  buttonType: ButtonType.textButton,
-                                  disabledColor: Colors.transparent,
-                                  color: Colors.transparent,
+                                TextButton(
+                                  onPressed: (_isResending || _cooldown > 0) ? null : resendLink,
+                                  child: Text(
+                                    _cooldown > 0
+                                        ? 'Resend available in $_cooldown s'
+                                        : 'Didn\'t receive? Send again.',
+                                    style: TextStyle(
+                                      color: _cooldown > 0
+                                          ? Colors.white.withValues(alpha: 0.3)
+                                          : const Color(0xFF60A5FA),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 20),
                                 SizedBox(

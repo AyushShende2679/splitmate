@@ -2,6 +2,10 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kIsWeb, TargetPlatform;
 
+// This file is generated via `flutterfire configure`.
+// Real keys are kept out of version control. Copy this template and fill
+// with your Firebase project values or run:
+//   flutterfire configure --project=YOUR_PROJECT_ID
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
@@ -35,30 +39,30 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBzNMo45Ocks_hFzsvSEJFX7PyfD0StZ0c',
-    appId: '1:143482753748:web:a7d96685c92aa2468ca141',
-    messagingSenderId: '143482753748',
-    projectId: 'splitmate-1cd5c',
-    authDomain: 'splitmate-1cd5c.firebaseapp.com',
-    storageBucket: 'splitmate-1cd5c.firebasestorage.app',
-    measurementId: 'G-ZPR27TWB1J',
+    apiKey: 'YOUR_WEB_API_KEY',
+    appId: 'YOUR_WEB_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+    measurementId: 'YOUR_MEASUREMENT_ID',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDtgsmqa1eJlt-kIZGk8-OHqiMCWbSDuAQ',
-    appId: '1:143482753748:android:84d2e668aef7715e8ca141',
-    messagingSenderId: '143482753748',
-    projectId: 'splitmate-1cd5c',
-    storageBucket: 'splitmate-1cd5c.firebasestorage.app',
+    apiKey: 'YOUR_ANDROID_API_KEY',
+    appId: 'YOUR_ANDROID_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBa_4uGI7bIPyRl4SANYk2A5pdVSeZiATw',
-    appId: '1:143482753748:ios:96374e30fc74c3828ca141',
-    messagingSenderId: '143482753748',
-    projectId: 'splitmate-1cd5c',
-    storageBucket: 'splitmate-1cd5c.firebasestorage.app',
-    iosBundleId: 'Splitmate',
-    iosClientId: '143482753748-mkj8ubngkmifdjif2qu4vnr398eu4iaq.apps.googleusercontent.com',
+    apiKey: 'YOUR_IOS_API_KEY',
+    appId: 'YOUR_IOS_APP_ID',
+    messagingSenderId: 'YOUR_SENDER_ID',
+    projectId: 'YOUR_PROJECT_ID',
+    storageBucket: 'YOUR_PROJECT_ID.firebasestorage.app',
+    iosBundleId: 'com.splitmate.app',
+    iosClientId: 'YOUR_IOS_CLIENT_ID',
   );
 }

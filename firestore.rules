@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isValidEmailLower(s) { return s is string && s.size() > 3 && s.size() < 100; }
+    function isValidAmount(a) { return a is number && a > 0 && a < 10000000; }
+    function isMember(groupId) {
+      return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+    }
+
+    // ── SaaS tenant isolation: users own their doc + subcollections only ──
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name','email','emailLower','phone','currency','profileImagePath','settings','updatedAt','createdAt'])
+        && (!('emailLower' in request.resource.data) || isValidEmailLower(request.resource.data.emailLower));
+      allow delete: if false; // SaaS: never hard-delete user doc, use cloud function (future)
+
+      match /personal_expenses/{expId} {
+        allow read, write: if isOwner(uid)
+          && (!('amount' in request.resource.data) || isValidAmount(request.resource.data.amount))
+          && request.resource.data.id == expId;
+      }
+      // budgets are inside users/{uid}.settings.budgets (no extra collection = free reads)
+      match /group_expenses/{expId} {
+        allow read, write: if isOwner(uid); // legacy mirror, deprecated - prefer top-level group_expenses
+      }
+    }
+
+    // ── Groups: strict membership + admin only delete ──
+    match /groups/{groupId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.members;
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() < 80;
+      allow update: if isSignedIn() && request.auth.uid in resource.data.members
+        && request.resource.data.members.size() >= 1;
+      allow delete: if isSignedIn() && resource.data.createdBy == request.auth.uid;
+    }
+
+    // ── Top-level group_expenses: single source of truth ──
+    match /group_expenses/{expId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.splitBetween;
+      allow create: if isSignedIn()
+        && request.resource.data.paidBy == request.auth.uid
+        && isValidAmount(request.resource.data.amount)
+        && request.resource.data.groupId is string
+        && exists(/databases/$(database)/documents/groups/$(request.resource.data.groupId))
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.members;
+      allow update: if isSignedIn()
+        && (resource.data.paidBy == request.auth.uid || request.auth.uid in resource.data.splitBetween)
+        && (!('amount' in request.resource.data) || isValidAmount(request.resource.data.amount));
+      allow delete: if isSignedIn() && resource.data.paidBy == request.auth.uid;
+    }
+
+    // ── Invitations: invitee or inviter only ──
+    match /invitations/{invId} {
+      allow read: if isSignedIn() && (resource.data.invitedUser == request.auth.uid || resource.data.invitedBy == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.invitedBy == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.invitedUser == request.auth.uid
+        && request.resource.data.status in ['accepted','declined'];
+      allow delete: if false;
+    }
+
+    // ── Legacy monitor_codes - now locked (Phase 3 replaced with Budget) ──
+    // SaaS: deny all writes, only read via AppCheck + server (future)
+    match /monitor_codes/{code} {
+      allow read, write: if false;
+    }
+
+    // ── Deny all else (fail-closed SaaS) ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

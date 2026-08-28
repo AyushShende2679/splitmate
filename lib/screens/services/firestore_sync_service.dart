@@ -49,14 +49,23 @@ Future<void> syncAppDataToFirestore() async {
     ...profilePayload,
   }, SetOptions(merge: true));
 
-  // Sync Personal Expenses
+  // Sync Personal Expenses - add updatedAt for lastWriteWins (free, no extra cost)
   final personalRef = userDoc.collection('personal_expenses');
   for (final key in personalBox.keys) {
     final raw = personalBox.get(key);
     if (raw is Map) {
       final expense = Map<String, dynamic>.from(raw);
+      expense['updatedAt'] = FieldValue.serverTimestamp();
+      expense['synced'] = true;
       await personalRef.doc(expense['id'].toString()).set(expense, SetOptions(merge: true));
     }
+  }
+  // Also sync budgets via settings (no new collection, stays in free quota)
+  final budgetsBox = Hive.box('budgets');
+  if (budgetsBox.isNotEmpty) {
+    final budgetsList = budgetsBox.values.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    settingsPayload['budgets'] = budgetsList;
+    await userDoc.set({'settings': settingsPayload, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
   }
 
   // Sync Group Expenses
@@ -96,13 +105,38 @@ Future<void> restoreAppDataFromFirestore() async {
     }
   }
 
-  // Restore Personal Expenses
+  // Restore Personal Expenses - merge (lastWriteWins, no data loss on offline)
   final personalSnap = await userDoc.collection('personal_expenses').get();
-  await personalBox.clear(); // Clear existing to prevent duplicates
+  final remoteIds = <String>{};
   for (final doc in personalSnap.docs) {
     final data = doc.data();
+    remoteIds.add(doc.id);
+    final remoteUpdatedAt = (data['updatedAt'] is Timestamp) ? (data['updatedAt'] as Timestamp).toDate() : null;
+    final localRaw = personalBox.get(doc.id);
+    if (localRaw is Map) {
+      final local = Map<String, dynamic>.from(localRaw);
+      final localUpdatedAt = local['updatedAt'] != null ? DateTime.tryParse(local['updatedAt'].toString()) : null;
+      if (localUpdatedAt != null && remoteUpdatedAt != null && localUpdatedAt.isAfter(remoteUpdatedAt)) {
+        continue; // keep newer local
+      }
+    }
     final expense = PersonalExpense.fromMap(data);
-    await personalBox.put(expense.id, expense.toMap());
+    final map = expense.toMap();
+    if (remoteUpdatedAt != null) map['updatedAt'] = remoteUpdatedAt.toIso8601String();
+    await personalBox.put(expense.id, map);
+  }
+  // Remove local entries deleted on server (only if remote has data, to support offline-first)
+  if (remoteIds.isNotEmpty) {
+    for (final key in personalBox.keys.toList()) {
+      if (!remoteIds.contains(key.toString())) {
+        // keep local unsynced entries that haven't been pushed yet - only delete if it was previously synced
+        // we check if local has been synced before by presence of updatedAt
+        final raw = personalBox.get(key);
+        if (raw is Map && raw.containsKey('synced')) {
+          await personalBox.delete(key);
+        }
+      }
+    }
   }
 
   // Restore Group Expenses

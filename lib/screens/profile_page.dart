@@ -359,10 +359,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       final file = File('${directory.path}/expense_data_${DateTime.now().millisecondsSinceEpoch}.json');
       await file.writeAsString(jsonString);
       
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'My Expense Data Backup',
-      );
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: 'My Expense Data Backup'));
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -477,6 +474,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
   
+  // ignore: unused_element
   void _showBudgetDialog() {
     final budgetController = TextEditingController(text: _monthlyBudget.toString());
     showDialog(
@@ -913,15 +911,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 Icons.category_outlined,
                 _showCategoriesDialog,
                 subtitle: '${_expenseCategories.length} categories',
-              ),
-              
-              _buildProfileOption(
-                'Budget Settings',
-                Icons.savings_outlined,
-                _showBudgetDialog,
-                subtitle: _monthlyBudget > 0 
-                    ? '${_profile.currency}${_monthlyBudget.toStringAsFixed(0)}/month' 
-                    : 'Not set',
               ),
               
               _buildProfileOption(

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'screens/login_page.dart';
 import 'package:splitmate_expense_tracker/SplitMateHomeScreen.dart';
 import 'screens/profile_page.dart';
 import 'screens/notification_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:splitmate_expense_tracker/screens/services/firestore_sync_service.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:async';
-import 'screens/parent_code_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:splitmate_expense_tracker/firebase_options.dart';
 import 'models/models.dart';
-import 'package:uni_links2/uni_links.dart';
+import 'data/models/budget.dart';
 import 'package:splitmate_expense_tracker/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -22,6 +21,21 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // SaaS-grade: AppCheck free tier - web uses ReCaptcha debug, mobile uses PlayIntegrity/DeviceCheck
+  try {
+    if (kIsWeb) {
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider('6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'), // Google test key, free, works on localhost/web
+      );
+    } else {
+      await FirebaseAppCheck.instance.activate(
+        androidProvider: kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.deviceCheck,
+      );
+    }
+  } catch (e) {
+    debugPrint('AppCheck activate skipped (web/ios debug): $e'); // free tier, non-blocking for web/ios
+  }
   await Hive.initFlutter();
 
   
@@ -30,23 +44,28 @@ Future<void> main() async {
   }
   if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(GroupExpenseAdapter());
   if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(UserProfileAdapter());
+  if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(BudgetAdapter());
 
   await Hive.openBox('personal_expenses');
   await Hive.openBox('group_expenses');
   await Hive.openBox('group_invitations');
   await Hive.openBox('user_profile');
   await Hive.openBox('settings');
-  await Hive.openBox('notification_status'); 
+  await Hive.openBox('notification_status');
+  await Hive.openBox('budgets'); 
   final statusBox = Hive.box('notification_status');
   await statusBox.put('hasUnseenNotifications', false);
-  await statusBox.put('sessionStartedAt', DateTime.now().millisecondsSinceEpoch); 
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-  );
+  await statusBox.put('sessionStartedAt', DateTime.now().millisecondsSinceEpoch);
+  // Firestore persistence: mobile requires explicit Settings, web enables by default (avoid web exception)
+  if (!kIsWeb) {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+    );
+  }
 
   initThemeNotifier();
 
-  runApp(const SplitMateApp());
+  runApp(const ProviderScope(child: SplitMateApp()));
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -87,47 +106,7 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  StreamSubscription? _sub;
-
-  @override
-  void initState() {
-    super.initState();
-    _initDeepLinks();
-  }
-
-  Future<void> _initDeepLinks() async {
-    if (kIsWeb) return; // uni_links not supported on web
-    try {
-      final initialLink = await getInitialLink();
-      if (initialLink != null) _handleLink(initialLink);
-
-      _sub = linkStream.listen((String? link) {
-        if (link != null) _handleLink(link);
-      });
-    } catch (e) {
-      debugPrint("Deep link error: $e");
-    }
-  }
-
-  void _handleLink(String link) {
-    final uri = Uri.parse(link);
-    if (uri.scheme == "splitmate" && uri.host == "monitor") {
-      final code = uri.queryParameters['code'];
-      if (code != null) {
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (_) => ParentCodeScreen(initialCode: code),
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
+  bool _hasRestored = false;
 
   @override
   Widget build(BuildContext context) {
@@ -138,15 +117,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
           return const SplashScreen();
         }
         if (snapshot.hasData && snapshot.data != null) {
-          Future.microtask(() async {
-            try {
-              await restoreAppDataFromFirestore();
-            } catch (e) {
-              debugPrint('Error restoring data from Firestore: $e');
-            }
-          });
+          if (!_hasRestored) {
+            _hasRestored = true;
+            Future.microtask(() async {
+              try {
+                await restoreAppDataFromFirestore();
+              } catch (e) {
+                debugPrint('Error restoring data from Firestore: $e');
+              }
+            });
+          }
           return const SplitMateHomeScreen();
         } else {
+          _hasRestored = false;
           return const LoginPage();
         }
       },

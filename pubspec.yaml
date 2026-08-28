@@ -11,12 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase & Authentication
-  firebase_core: ^2.25.4
-  firebase_auth: ^4.15.3
-  cloud_firestore: ^4.12.2
-  cloud_functions: ^4.3.4
-  http: ^1.2.1
+  # Firebase & Authentication - aligned to 3.x/5.x (free tier, no overrides)
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  cloud_firestore: ^5.6.5
+  firebase_app_check: ^0.3.2+10
 
   # Charts & Local DB
   fl_chart: ^1.1.0
@@ -31,14 +30,14 @@ dependencies:
   image_picker: ^1.0.4
 
   # Social Login
-  google_sign_in: ^6.0.4
+  google_sign_in: ^6.1.1
 
-  # State Management & Utils
-  provider: ^6.1.1
-  shared_preferences: ^2.2.2
+  # State Management - Riverpod (replaces provider)
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
 
   # Date & Time
-  intl: ^0.20.2 
+  intl: ^0.20.2
 
   # File Handling & PDF
   printing: ^5.14.2
@@ -48,31 +47,20 @@ dependencies:
   path_provider: ^2.1.1
   device_info_plus: ^11.5.0
 
-  # Local Storage & Offline Support
-  sqflite: ^2.3.0
-  connectivity_plus: ^6.1.5
-  share_plus: ^7.0.0
-  uni_links2: ^0.6.0
-
-  timer_button: ^2.0.0
+  # Sharing & Utils (kept - actively used)
+  share_plus: ^11.0.0
   json_annotation: ^4.9.0
   uuid: ^4.5.1
-  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  json_serializable: ^6.7.1
-  analyzer: ^6.4.1
+  json_serializable: ^6.8.0
   hive_generator: ^2.0.1
-  build_runner: ^2.4.6
+  build_runner: ^2.4.13
 
   flutter_launcher_icons: "^0.13.1"
-
-dependency_overrides:
-  firebase_core: ^3.4.1
-  firebase_auth_web: 5.13.0
 
 flutter:
   uses-material-design: true

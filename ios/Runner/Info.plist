@@ -55,5 +55,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>SplitMate needs camera access to set profile photo</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SplitMate needs photo library access to pick profile image</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

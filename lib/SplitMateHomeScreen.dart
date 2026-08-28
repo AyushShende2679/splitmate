@@ -1,8 +1,8 @@
+// ignore_for_file: file_names, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
-import 'dart:math';
 import '../models/models.dart';
 import 'screens/add_edit_expense_screen.dart';
 import 'screens/profile_page.dart';
@@ -23,6 +23,8 @@ import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:splitmate_expense_tracker/screens/services/group_service.dart';
 import 'package:splitmate_expense_tracker/theme/app_theme.dart';
+import 'package:splitmate_expense_tracker/presentation/widgets/budget_insights_card.dart';
+import 'package:splitmate_expense_tracker/presentation/widgets/budget_dialog.dart';
 
 class SplitMateHomeScreen extends StatefulWidget {
   const SplitMateHomeScreen({super.key});
@@ -328,6 +330,7 @@ void _loadCurrency() {
               children: [
                 _buildHeader(),
                 _buildModeToggle(),
+                const BudgetAlertBanner(), // Phase 2->3 transparency: reads budgets + personal expenses live
                 _buildMonthlySummary(),
                 _buildActionableCards(),
                 _buildRecentExpenses(),
@@ -723,31 +726,40 @@ void _loadCurrency() {
   }
 
   Widget _buildActionableCards() {
+    // Phase 1 -> ProviderScope enables Riverpod; Phase 2 -> BudgetRepository + Budgets box
+    // Now Phase 3 connects: BudgetInsightsCard consumes budgetsProvider + auto-updates on expense changes
+    // Fix: IntrinsicHeight ensures both cards same height (no size mismatch)
     return Container(
       margin: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildActionCard(
-              'PDF Reports',
-              'Export monthly reports',
-              Icons.picture_as_pdf_outlined,
-              const Color(0xFFE53E3E),
-              _exportPDFReport,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'PDF Reports',
+                'Export monthly reports',
+                Icons.picture_as_pdf_outlined,
+                const Color(0xFFE53E3E),
+                _exportPDFReport,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildActionCard(
-              'Parent Monitor',
-              'Manage guardian access',
-              Icons.family_restroom_outlined,
-              const Color(0xFF4A90E2),
-              _manageParentAccess,
+            const SizedBox(width: 12),
+            Expanded(
+              child: BudgetInsightsCard(onTap: _openBudgetManager),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+
+  void _openBudgetManager() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const BudgetDialog(),
     );
   }
 
@@ -764,6 +776,7 @@ void _loadCurrency() {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
+        constraints: const BoxConstraints(minHeight: 130),
         padding: const EdgeInsets.all(16),
         decoration: isDark
             ? AppTheme.glassDecoration(borderRadius: 16)
@@ -773,6 +786,7 @@ void _loadCurrency() {
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 40,
@@ -1146,7 +1160,16 @@ void _loadCurrency() {
     }
   }
 
- String _formatCurrency(double amount) => '$_currencySymbol${amount.toStringAsFixed(0)}';
+  String _formatCurrency(double amount) => '$_currencySymbol${amount.toStringAsFixed(0)}';
+
+  // PDF font NotoSans doesn't support emoji - strip them to prevent tofu/missing glyphs
+  String _sanitizeForPdf(String text) {
+    final sanitized = text.replaceAll(RegExp(
+      r'[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{FE00}-\u{FE0F}\u{200D}]',
+      unicode: true,
+    ), '').trim();
+    return sanitized.isEmpty ? text.replaceAll(RegExp(r'[^\x00-\x7F\u00A0-\u024F\u1E00-\u1EFF\u0900-\u097F\u20B9]', unicode: true), '').trim() : sanitized;
+  }
 
 
   List<dynamic> _allForMonth() {
@@ -1486,8 +1509,7 @@ void _loadCurrency() {
                 TextButton(
                   onPressed: () async {
                     Navigator.pop(context);
-                    await Share.shareXFiles([XFile(file.path)],
-                        text: '📊 My SplitMate Expense Report');
+                    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], text: '📊 My SplitMate Expense Report'));
                   },
                   child: const Text('Share'),
                 ),
@@ -1628,17 +1650,17 @@ void _loadCurrency() {
           if (_isGroupMode && e is GroupExpense) {
             return [
               DateFormat('MMM dd').format(e.date),
-              e.title,
-              e.category,
-              e.paidBy,
+              _sanitizeForPdf(e.title),
+              _sanitizeForPdf(e.category),
+              _sanitizeForPdf(e.paidBy),
               _formatCurrency(e.amount),
               e.isSettled ? 'Settled' : 'Pending',
             ];
           } else if (!_isGroupMode && e is PersonalExpense) {
             return [
               DateFormat('MMM dd').format(e.date),
-              e.title,
-              e.category,
+              _sanitizeForPdf(e.title),
+              _sanitizeForPdf(e.category),
               _formatCurrency(e.amount),
             ];
           }
@@ -1827,80 +1849,11 @@ void _loadCurrency() {
 
 
 
+  // ignore: unused_element
+  @Deprecated('Replaced by Budget Insights - Phase 3')
   Future<void> _manageParentAccess() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) {
-      _showSnackBar("⚠ Login required");
-      return;
-    }
-
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final random = Random.secure();
-    final code = List.generate(8, (_) {
-      return chars[random.nextInt(chars.length)];
-    }).join();
-
-    await FirebaseFirestore.instance.collection("monitor_codes").doc(code).set({
-      "childUid": uid,
-      "createdAt": FieldValue.serverTimestamp(),
-    });
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("👨‍👩‍👧 Parent Monitoring Guide"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text("For a parent to monitor your expenses:",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              const Text("1️⃣ Parent must have the SplitMate app installed."),
-              const Text("2️⃣ Copy this URL scheme and open it in browser:\n"),
-              SelectableText("splitmate://monitor?code=$code",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                      fontSize: 14)),
-              const SizedBox(height: 10),
-              const Text(
-                  "3️⃣ The browser will ask to open with SplitMate → Continue."),
-              Text("4️⃣ Enter this code inside the app to validate:\n",
-                  style: const TextStyle(fontWeight: FontWeight.normal)),
-              SelectableText(code,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                      fontSize: 24)),
-              const SizedBox(height: 10),
-              const Text(
-                  "✅ Parent can now see either Personal or Group expenses using the toggle in monitoring screen."),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                final message = "👨‍👩‍👧 Parent Monitoring Steps:\n\n"
-                    "1. Install SplitMate app\n"
-                    "2. In browser enter: splitmate://monitor?code=$code\n"
-                    "3. Continue to open SplitMate\n"
-                    "4. Enter Monitor Code: $code\n\n"
-                    "Now you can monitor child’s Personal/Group expenses ✅";
-                Share.share(message);
-                Navigator.pop(context);
-              },
-              child: const Text("📤 Share Instructions"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        ),
-      );
-    }
+    // Kept for backward compat, now routes to Budget Manager (free, no monitor_codes collection)
+    _openBudgetManager();
   }
 
   void _showSnackBar(String message) {

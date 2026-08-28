@@ -26,6 +26,7 @@ ios/Runner/GeneratedPluginRegistrant.*
 # Firebase / Secrets
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
 .env
 .env.*
 keys.json
