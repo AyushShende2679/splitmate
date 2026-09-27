@@ -124,7 +124,7 @@ firebase deploy --only firestore:rules
 firebase deploy --only firestore:indexes
 ```
 
-Rules enforce: users own their doc, groups members-only, `group_expenses` readable only by `splitBetween`, `monitor_codes` locked (legacy feature removed). See `firestore.rules`.
+Rules enforce: users own their doc, groups members-only, `group_expenses` readable only by `splitBetween`. See `firestore.rules`.
 
 ## Security Notes
 

@@ -65,12 +65,6 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── Legacy monitor_codes - now locked (Phase 3 replaced with Budget) ──
-    // SaaS: deny all writes, only read via AppCheck + server (future)
-    match /monitor_codes/{code} {
-      allow read, write: if false;
-    }
-
     // ── Deny all else (fail-closed SaaS) ──
     match /{document=**} {
       allow read, write: if false;

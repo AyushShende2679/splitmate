@@ -1849,13 +1849,6 @@ void _loadCurrency() {
 
 
 
-  // ignore: unused_element
-  @Deprecated('Replaced by Budget Insights - Phase 3')
-  Future<void> _manageParentAccess() async {
-    // Kept for backward compat, now routes to Budget Manager (free, no monitor_codes collection)
-    _openBudgetManager();
-  }
-
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
